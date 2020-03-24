@@ -1,0 +1,261 @@
+Installation of Nginx 1.15.0 with rtmp, HLS, DASH and VOD module.
+OS: Ubuntu 16 and 18 64 bit
+NOTE: we are using Nginx as streaming engine and installing it on remote Ubuntu server.
+(1)
+For listing available time zone you can fire command "timedatectl list-timezones" This will list all time zone.
+For setting up timezone fire commands
+root@username:~# timedatectl list-timezones
+root@username:~# sudo timedatectl set-timezone 'Region/City' (where Region/City should be like Africa/Accra or America/Antigua as results from command timedatectl list-timezones).
+
+(2) System update commands:
+root@username:~# sudo apt update && sudo apt upgrade -y
+
+(3) For Nginx compilation we will install some mandatory packages:
+root@username:~# sudo apt install -y build-essential git tree
+
+(4) Downloading and installing Nginx version 1.15.0 ( If you installing other version then change name of tar and corresponding directory name after untar).
+root@username:~# wget https://nginx.org/download/nginx-1.15.0.tar.gz && tar zxvf nginx-1.15.0.tar.gz
+
+Download the mandatory NGINX dependencies' source code and extract them:
+
+# PCRE version 8.42
+root@username:~# wget https://ftp.pcre.org/pub/pcre/pcre-8.42.tar.gz && tar xzvf pcre-8.42.tar.gz
+
+# zlib version 1.2.11
+root@username:~# wget https://www.zlib.net/zlib-1.2.11.tar.gz && tar xzvf zlib-1.2.11.tar.gz
+
+# OpenSSL version 1.1.0h
+root@username:~# wget https://www.openssl.org/source/openssl-1.1.0h.tar.gz && tar xzvf openssl-1.1.0h.tar.gz
+
+#Download and install VOD module
+root@username:~# wget https://github.com/kaltura/nginx-vod-module/archive/master.zip && unzip master.zip
+
+#Next, clone the Nginx RTMP Module source code using git command.
+root@username:~# git clone https://github.com/sergey-dryabzhinsky/nginx-rtmp-module.git
+
+(5)
+Install optional NGINX dependencies:
+
+root@username:~# sudo add-apt-repository -y ppa:maxmind/ppa
+root@username:~# sudo apt update && sudo apt upgrade -y 
+root@username:~# sudo apt install -y perl libperl-dev libgd3 libgd-dev libgeoip1 libgeoip-dev geoip-bin libxml2 libxml2-dev libxslt1.1 libxslt1-dev
+
+#Clean up all .tar.gz files. We don't need them anymore:
+root@username:~# rm -rf *.tar.gz
+
+#Enter the NGINX source directory:
+
+root@username:~# cd ~/nginx-1.15.0
+
+#For good measure list directories and files that compose NGINX source code with tree utility:
+
+root@username:~# tree -L 2 .
+
+#Copy NGINX manual page to /usr/share/man/man8/ directory:
+
+root@username:~# sudo cp ~/nginx-1.15.0/man/nginx.8 /usr/share/man/man8
+root@username:~# sudo gzip /usr/share/man/man8/nginx.8
+root@username:~# ls /usr/share/man/man8/ | grep nginx.8.gz
+#Check that Man page for NGINX is working:
+root@username:~# man nginx
+
+#For help, you can see full list of up-to-date NGINX compile time options by running:
+
+root@username:~# ./configure --help
+# To see want core modules can be build as dynamic run:
+root@username:~# ./configure --help | grep -F =dynamic
+
+
+(6)
+#Configure, compile and install NGINX:
+
+root@username:~# ./configure --prefix=/etc/nginx --sbin-path=/usr/sbin/nginx --modules-path=/usr/lib/nginx/modules --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/run/nginx.lock --user=nginx --group=nginx --build=Ubuntu --builddir=nginx-1.15.0 --with-select_module --with-poll_module --with-threads --with-file-aio --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-perl_modules_path=/usr/share/perl/5.26.1 --with-perl=/usr/bin/perl --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/cache/nginx/client_temp --http-proxy-temp-path=/var/cache/nginx/proxy_temp --http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp --http-scgi-temp-path=/var/cache/nginx/scgi_temp --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-compat  --with-pcre=../pcre-8.42 --with-pcre-jit --with-zlib=../zlib-1.2.11 --with-openssl=../openssl-1.1.0h --with-openssl-opt=no-nextprotoneg --add-module=../nginx-rtmp-module --add-module=../nginx-vod-module-master --with-debug
+
+root@username:~# make
+root@username:~# sudo make install
+
+#After building NGINX, navigate to home (~) directory:
+
+root@username:~# cd ~
+
+#Symlink /usr/lib/nginx/modules to /etc/nginx/modules directory. etc/nginx/modules is a standard place for NGINX modules:
+
+root@username:~# sudo ln -s /usr/lib/nginx/modules /etc/nginx/modules
+
+#Print the NGINX version, compiler version, and configure script parameters:
+
+root@username:~# sudo nginx -V
+# nginx version: nginx/1.15.0 (Ubuntu)
+# built by gcc 7.3.0 (Ubuntu 7.3.0-16ubuntu3)
+# built with OpenSSL 1.1.0h  27 Mar 2018
+# TLS SNI support enabled
+# configure arguments: --prefix=/etc/nginx --sbin-path=/usr/sbin/nginx --modules-path=/usr/lib/nginx/modules
+# . . .
+# . . .
+
+(7)
+#Create NGINX system group and user:
+
+root@username:~# sudo adduser --system --home /nonexistent --shell /bin/false --no-create-home --disabled-login --disabled-password --gecos "nginx user" --group nginx
+
+#Next, we need to create a new directory for the HLS configuration and we've defined the web root directory is on the '/mnt' directory.
+
+#Create the 'hls' directory under the '/mnt' directory and change the owner of the directory to the nginx user and group.
+#This is where Nginx will stoore HLS chunks ( we will use same directory path in nginx.conf)
+root@username:~# mkdir -p /mnt/hls 
+root@username:~# chown -R nginx:nginx /mnt/hls
+
+
+#Check NGINX syntax and potential errors:
+
+root@username:~# sudo nginx -t
+# Will throw this error -> nginx: [emerg] mkdir() "/var/cache/nginx/client_temp" failed (2: No such file or directory)
+
+# Create NGINX cache directories and set proper permissions
+root@username:~# sudo mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/fastcgi_temp /var/cache/nginx/proxy_temp /var/cache/nginx/scgi_temp /var/cache/nginx/uwsgi_temp
+root@username:~# sudo chmod 700 /var/cache/nginx/*
+root@username:~# sudo chown nginx:root /var/cache/nginx/*
+
+# Re-check syntax and potential errors.
+root@username:~# sudo nginx -t
+
+#Create NGINX systemd unit file:
+
+root@username:~# sudo vim /etc/systemd/system/nginx.service
+
+#Copy/paste the below content into /etc/systemd/system/nginx.service file:
+
+[Unit]
+Description=nginx - high performance web server
+Documentation=https://nginx.org/en/docs/
+After=network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/nginx.pid
+ExecStartPre=/usr/sbin/nginx -t -c /etc/nginx/nginx.conf
+ExecStart=/usr/sbin/nginx -c /etc/nginx/nginx.conf
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+
+(8)
+
+#Enable NGINX to start on boot and start NGINX immediately:
+
+root@username:~# sudo systemctl enable nginx.service
+root@username:~# sudo systemctl start nginx.service
+
+#Check if NGINX will automatically initiate after a reboot:
+
+root@username:~# sudo systemctl is-enabled nginx.service
+# enabled
+
+#Check if NGINX is running by running one of the following commands:
+
+root@username:~# sudo systemctl status nginx.service
+# or
+root@username:~# ps aux | grep nginx
+# or
+root@username:~# curl -I 127.0.0.1
+In web browser enter url http://serverip:8080/ ( if you have set port 8080 for nginx http server in nginx.conf. Default will be 80). This will prompt you nginx html page.
+
+(9)
+#Create Uncomplicated Firewall (UFW) NGINX application profile:
+
+root@username:~# sudo vim /etc/ufw/applications.d/nginx
+
+#Copy/paste the below content into /etc/ufw/applications.d/nginx file:
+
+[Nginx HTTP]
+title=Web Server (Nginx, HTTP)
+description=Small, but very powerful and efficient web server
+ports=80/tcp
+
+[Nginx HTTPS]
+title=Web Server (Nginx, HTTPS)
+description=Small, but very powerful and efficient web server
+ports=443/tcp
+
+[Nginx Full]
+title=Web Server (Nginx, HTTP + HTTPS)
+description=Small, but very powerful and efficient web server
+ports=80,443/tcp
+
+#Verify that UFW application profiles are created and recognized:
+
+root@username:~# sudo ufw app list
+
+# Available applications:
+ # Nginx Full
+ # Nginx HTTP
+ # Nginx HTTPS
+ # OpenSSH
+
+ #NGINX by default, generates backup .default files in /etc/nginx. Remove .default files from /etc/nginx directory:
+
+root@username:~# sudo rm /etc/nginx/*.default
+
+#Place syntax highlighting of NGINX configuration for Vim editor into ~/.vim:
+
+# For regular non-root user
+root@username:~# mkdir ~/.vim/
+root@username:~# cp -r ~/nginx-1.15.0/contrib/vim/* ~/.vim/
+# For root user
+root@username:~# sudo mkdir /root/.vim/
+root@username:~# sudo cp -r ~/nginx-1.15.0/contrib/vim/* /root/.vim/
+
+NOTE: By doing the above step, you will get a nice syntax highlighting when editing NGINX configuration files in Vim editor.
+
+(10)
+#Create conf.d, snippets, sites-available and sites-enabled directories in /etc/nginx directory:
+
+root@username:~# sudo mkdir /etc/nginx/{conf.d,snippets,sites-available,sites-enabled}
+
+#Change permissions and group ownership of NGINX log files:
+
+root@username:~# sudo chmod 640 /var/log/nginx/*
+root@username:~# sudo chown nginx:adm /var/log/nginx/access.log /var/log/nginx/error.log
+
+#Create logrotation config for NGINX.
+
+root@username:~# sudo vim /etc/logrotate.d/nginx
+
+#Populate the file with the below text, then save and exit:
+
+/var/log/nginx/*.log {
+    daily
+    missingok
+    rotate 52
+    compress
+    delaycompress
+    notifempty
+    create 640 nginx adm
+    sharedscripts
+    postrotate
+            if [ -f /var/run/nginx.pid ]; then
+                    kill -USR1 `cat /var/run/nginx.pid`
+            fi
+    endscript
+}
+
+#Remove all downloaded files from home directory:
+
+root@username:~# cd ~
+root@username:~# rm -rf nginx-1.15.0/ openssl-1.1.0h/ pcre-8.42/ zlib-1.2.11/
+___________________________________________________________________________________________
+
+For HLS stream/chunks we have created folder /HLS/mnt. In the attached nginx.conf we have set same folder path.
+So after installation of Nginx you can take nginx.conf as an reference for /etc/nginx/nginx.conf.
+
+Use following commands:
+(1) To check nginx syntaxt: nginx -t
+(2) To stop nginx: systemctl stop nginx
+(3) To start nginx: systemctl start nginx.
+(4) To restart nginx: systemctl restart nginx.
+
+Whenever you make change in nginx or upload new nginx.conf always fire nginx -t command to check syntax.
+
